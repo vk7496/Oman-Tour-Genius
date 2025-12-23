@@ -6,34 +6,30 @@ import pandas as pd
 from datetime import datetime
 import time
 
-# --- CONFIGURATION ---
-# حتماً در Secrets استریم‌لیت کلید را با نام GROQ_API_KEY وارد کن
+# --- CONFIG ---
+# Make sure GROQ_API_KEY is in your Streamlit Secrets
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except Exception as e:
-    st.error("Please set your GROQ_API_KEY in Streamlit Secrets!")
+except:
+    st.error("GROQ_API_KEY not found in Secrets!")
 
-st.set_page_config(page_title="BinMajid AI | bmtoursoman.com", page_icon="🇴🇲", layout="wide")
+st.set_page_config(page_title="BinMajid AI Consultant", page_icon="🇴🇲", layout="wide")
 
-# --- KNOWLEDGE BASE (REAL DATA) ---
-# اطلاعات استخراج شده از سایت و اینستاگرام بن‌ماجد
+# --- SYSTEM PROMPT (English) ---
 REAL_DATA_PROMPT = """
-You are 'Majid', the official AI specialist for BinMajid Tourism (bmtoursoman.com).
-License Number: 12596902.
-WhatsApp Business: +96879378780.
+You are 'Majid', a premium Travel Consultant for BinMajid Tourism Oman (bmtoursoman.com).
+Your mission is to qualify the lead by asking specific questions before getting their WhatsApp.
 
-Our Tours:
-1. Musandam Khasab: Full day dhow cruise, dolphin watching, snorkeling at Telegraph & Seebi islands. Includes lunch & drinks.
-2. Desert Safari: Wahiba Sands (Sharqiya Sands) overnight camping, sunset dunes, camel rides.
-3. Mountains: Jebel Shams (Oman's Grand Canyon) and Jebel Akhdar (Green Mountain).
-4. Wadis: Wadi Shab hiking/swimming and Wadi Bani Khalid.
-5. City: Muscat Grand Mosque, Mutrah Souq, and Al Alam Palace.
+Follow these rules:
+1. Be warm and professional. Use "Omani Hospitality" style.
+2. Flow of conversation:
+   - Step A: Ask if they prefer Adventure/Nature or Luxury/Relaxation.
+   - Step B: Ask how many people are in their group and if they have small children.
+   - Step C: Ask for the duration of their stay in Oman.
+   - Step D: Recommend a specific tour based on their needs.
+   - Step E: Politely ask for their WhatsApp to send a personalized PDF itinerary and price quote.
 
-Rules:
-- Answer in English or the user's language.
-- Be extremely polite and use Omani hospitality vibes.
-- If they ask for prices, tell them it depends on group size and ask for their WhatsApp to send the latest PDF brochure.
-- Your priority is to capture their phone number for the sales team.
+IMPORTANT: Do not ask all questions in one message. Keep it a natural back-and-forth conversation.
 """
 
 # --- SESSION STATE ---
@@ -42,7 +38,7 @@ if "messages" not in st.session_state:
 if "leads_data" not in st.session_state:
     st.session_state.leads_data = []
 
-# --- HELPER FUNCTIONS ---
+# --- FUNCTIONS ---
 def extract_phone(text):
     pattern = r'(\+?\d{8,15})'
     match = re.search(pattern, text)
@@ -52,32 +48,31 @@ def extract_phone(text):
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.title("🏝️ BinMajid AI Travel Agent")
-    st.write("Plan your dream Oman adventure with our official AI guide.")
+    st.title("🇴🇲 BinMajid Smart Concierge")
+    st.caption("Official AI Assistant for bmtoursoman.com")
     
-    # نمایش تاریخچه چت
+    # Display Chat History
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # ورودی کاربر
-    if prompt := st.chat_input("Ask about Musandam, Desert or Jebel Shams..."):
+    if prompt := st.chat_input("Hi! I'm planning a trip to Oman..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # استخراج لید (شماره تماس)
+        # Lead Capture
         phone = extract_phone(prompt)
         if phone:
             clean_phone = re.sub(r'\D', '', phone)
             st.session_state.leads_data.append({
                 "Time": datetime.now().strftime("%H:%M"),
-                "Customer Phone": clean_phone,
-                "Context": prompt[:30] + "..."
+                "Phone": clean_phone,
+                "Last_Msg": prompt[:30] + "..."
             })
-            st.toast("New Booking Interest Captured!", icon="📞")
+            st.toast("Contact Details Saved!", icon="✅")
 
-        # پاسخ هوش مصنوعی از Groq
+        # Groq AI Response
         with st.chat_message("assistant"):
             try:
                 response = client.chat.completions.create(
@@ -88,28 +83,30 @@ with col1:
                 ai_msg = response.choices[0].message.content
                 st.markdown(ai_msg)
                 st.session_state.messages.append({"role": "assistant", "content": ai_msg})
-            except Exception as e:
-                st.error("The AI is busy. Please try again in a moment.")
+            except:
+                st.error("AI service is busy. Please try again.")
 
 with col2:
-    st.markdown("### 📊 Business Dashboard")
-    st.info("Direct leads for BinMajid Sales Team")
+    st.markdown("### 🔒 Business Dashboard")
+    # ADMIN PASSWORD: binmajid2024
+    admin_password = st.text_input("Admin Access Code", type="password")
     
-    if st.session_state.leads_data:
-        df = pd.DataFrame(st.session_state.leads_data)
-        st.dataframe(df, use_container_width=True)
-        
-        target_customer = st.session_state.leads_data[-1]["Customer Phone"]
-        wa_text = urllib.parse.quote(f"Hello from BinMajid Tourism! We saw your interest in our Oman tours. How can we help you?")
-        
-        st.success(f"Action: Contact {target_customer}")
-        st.link_button("🚀 Chat on WhatsApp", f"https://wa.me/{target_customer}?text={wa_text}")
-        
-        if st.button("Clear Leads"):
-            st.session_state.leads_data = []
-            st.rerun()
+    if admin_password == "binmajid2024": 
+        st.success("Authorized Access")
+        if st.session_state.leads_data:
+            df = pd.DataFrame(st.session_state.leads_data)
+            st.dataframe(df, use_container_width=True)
+            
+            last_phone = st.session_state.leads_data[-1]["Phone"]
+            wa_text = urllib.parse.quote("Hi! This is BinMajid Tourism. We received your request through our AI assistant. How can we help you further?")
+            
+            st.link_button(f"Chat with Client: {last_phone}", f"https://wa.me/{last_phone}?text={wa_text}")
+        else:
+            st.info("No leads captured yet.")
+    elif admin_password != "":
+        st.error("Incorrect Code")
     else:
-        st.write("Waiting for leads... (Test by typing a phone number)")
+        st.info("Enter the admin code to view the leads table.")
 
     st.divider()
-    st.image("https://visitoman.om/wp-content/uploads/2022/05/Wadi-Shab-1.jpg", caption="BinMajid: Your Gateway to Oman")
+    st.image("https://visitoman.om/wp-content/uploads/2022/05/Wadi-Shab-1.jpg", caption="Experience Oman with BinMajid")
