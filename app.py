@@ -6,7 +6,7 @@ from datetime import datetime
 import time
 
 # --- CONFIGURATION ---
-MY_WHATSAPP_NUMBER = "96879378780" # شماره رسمی بن‌ماجد برای دمو
+MY_WHATSAPP_NUMBER = "96891278434" # شماره رسمی بن‌ماجد برای دمو
 
 st.set_page_config(page_title="MajidAI | BinMajid Tourism", page_icon="🇴🇲", layout="wide")
 
